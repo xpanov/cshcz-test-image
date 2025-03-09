@@ -12,6 +12,7 @@ jobs:
   #   uses: ./.github/workflows/template-terraform.yml
 
   test:
+    runs-on: ubuntu-latest
     steps:
       - name: Setup packer
         uses: hashicorp/setup-packer@main
