@@ -35,7 +35,7 @@ jobs:
         run: |
           pip install openstackclient
           openstack --help
-          openstack image list
+          # openstack image list
 
   # test-kypo-cleanup:
   #   needs: test-kypo
