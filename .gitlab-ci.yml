@@ -1,0 +1,11 @@
+include:
+  - project: muni-kypo-images/ci-cd-virtual-images
+    file: qemu.yml
+  - project: muni-kypo-images/ci-cd-virtual-images
+    file: vbox.yml
+
+variables:
+  NAME: "" # Name of packer configuration file without `.json`, for example kali
+  TYPE: "" # linux or windows
+  DISTRO: "" # See https://docs.openstack.org/glance/latest/admin/useful-image-properties.html property os_distro
+  GUI_ACCESS: "true" # Whether VNC or RDP server is installed and configured for [Guacamole](https://docs.crp.kypo.muni.cz/user-guide-advanced/sandboxes/sandbox-access/#apache-guacamole)

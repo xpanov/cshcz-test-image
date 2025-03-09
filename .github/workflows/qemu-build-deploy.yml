@@ -1,0 +1,81 @@
+name: Build and Deploy QEMU
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-qemu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      
+      - name: Build QEMU Image
+        run: packer build -only=qemu ${{ env.NAME }}.json
+      
+      - name: Terraform Destroy
+        run: gitlab-tofu destroy
+      
+      - name: Terraform Plan
+        run: gitlab-tofu plan -target=module.topology.openstack_images_image_v2.test_image
+      
+      - name: Terraform Apply
+        run: gitlab-tofu apply
+    env:
+      NAME: ${{ github.event.repository.name }}
+
+  deploy-qemu:
+    runs-on: ubuntu-latest
+    needs: build-qemu
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      
+      - name: Get Version from Changelog
+        run: |
+          mkdir -p target-qemu
+          openstack image save --file "target-qemu/${{ env.NAME }}" "${{ github.event.repository.name }}-${{ github.sha }}"
+      
+      - name: Upload Image to OpenStack
+        run: |
+          HEAD_IMAGE_ID=$(openstack image show --column id --format value ${{ github.event.repository.name }}-${{ env.VERSION }})
+          if openstack image show ${{ github.event.repository.name }} > /dev/null; then
+            PREV_VERSION=$(openstack image show ${{ github.event.repository.name }} --column properties --format json | jq '.properties."owner_specified.openstack.version"' -re) || PREV_VERSION=0.1.0
+            if openstack image show ${{ github.event.repository.name }}-$PREV_VERSION > /dev/null; then
+              openstack image delete ${{ github.event.repository.name }} || openstack image set ${{ github.event.repository.name }} --name ${{ github.event.repository.name }}-DEPRECATED
+            else
+              openstack image set ${{ github.event.repository.name }} --name ${{ github.event.repository.name }}-$PREV_VERSION
+            fi
+          fi
+          openstack image set ${{ github.event.repository.name }}-${{ env.VERSION }} --name ${{ github.event.repository.name }}
+      
+      - name: Share Image to OpenStack Projects
+        run: |
+          while read -r PROJECT_ID; do
+            openstack image add project $HEAD_IMAGE_ID $PROJECT_ID
+          done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | .project_id')
+      
+      - name: Accept Image Sharing
+        run: |
+          while read -r APP_ID && read -r APP_SECRET; do
+            OS_APPLICATION_CREDENTIAL_ID=$APP_ID
+            OS_APPLICATION_CREDENTIAL_SECRET=$APP_SECRET
+            openstack image set --accept $HEAD_IMAGE_ID
+          done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | (.app_cred_id, .app_cred_secret)')
+      
+      - name: Upload to OpenStack Object Store
+        if: env.TYPE != 'windows'
+        run: |
+          echo "Uploading image to OpenStack Object Store..."
+    env:
+      NAME: "qemu"
+      OS_AUTH_TYPE: "v3applicationcredential"
+      OS_AUTH_URL: "https://identity.cloud.muni.cz/v3"
+      OS_IDENTITY_API_VERSION: "3"
+      OS_INTERFACE: "public"
+      OS_REGION_NAME: "brno1"

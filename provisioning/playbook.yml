@@ -1,0 +1,13 @@
+- name: Hello world
+  hosts: image-test
+  gather_facts: no
+  tasks:
+    - name: Wait for connection
+      wait_for_connection:
+        timeout: 600
+
+    - name: Gather facts
+      setup:
+
+    - name: Print hello world
+      debug:

@@ -1,0 +1,25 @@
+name: KYPO Test Workflow
+
+on:
+  push:
+    branches: '**'
+  pull_request:
+    branches: '**'
+
+jobs:
+
+  test-kypo:
+    uses: ./.github/workflows/template-terraform.yml
+
+  # test-kypo-cleanup:
+  #   needs: test-kypo
+  #   if: cancelled()
+  #   uses: ./.github/workflows/template-terraform-destroy.yml  # Call the reusable workflow
+    # runs-on: ubuntu-latest
+    # steps:
+    #   - name: Checkout repository
+    #     uses: actions/checkout@v4
+      
+    #   - name: Run Terraform destroy
+    #     run: |
+    #       terraform destroy -auto-approve
