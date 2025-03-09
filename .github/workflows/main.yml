@@ -26,10 +26,16 @@ jobs:
           packer plugins install github.com/hashicorp/virtualbox
           packer plugins install github.com/hashicorp/vagrant
 
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13' 
+
       - name: Test openstack
         run: |
+          pip install openstackclient
+          openstack --help
           openstack image list
-          openstack -h
 
   # test-kypo-cleanup:
   #   needs: test-kypo
