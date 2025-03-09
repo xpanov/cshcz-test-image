@@ -8,8 +8,27 @@ on:
 
 jobs:
 
-  test-kypo:
-    uses: ./.github/workflows/template-terraform.yml
+  # test-kypo:
+  #   uses: ./.github/workflows/template-terraform.yml
+
+  test:
+    steps:
+      - name: Setup packer
+        uses: hashicorp/setup-packer@main
+        id: setup
+        with:
+          version: latest
+
+      - name: Install Packer Plugins
+        run: |
+          packer plugins install github.com/hashicorp/qemu
+          packer plugins install github.com/hashicorp/virtualbox
+          packer plugins install github.com/hashicorp/vagrant
+
+      - name: Test openstack
+        run: |
+          openstack image list
+          openstack -h
 
   # test-kypo-cleanup:
   #   needs: test-kypo

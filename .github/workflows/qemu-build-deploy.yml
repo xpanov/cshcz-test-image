@@ -1,11 +1,7 @@
 name: Build and Deploy QEMU
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-  workflow_dispatch:
+  workflow_call
 
 jobs:
   build-qemu:
