@@ -1,0 +1,83 @@
+name: KYPO Test Workflow
+
+# on:
+#   push:
+#     branches: '**'
+#   pull_request:
+#     branches: '**'
+
+jobs:
+
+
+  test-qemu:
+    runs-on: ubuntu-latest
+    # env:
+    #   TF_VAR_NAME: ${NAME}
+    #   TF_VAR_TYPE: ${TYPE}
+    #   TF_VAR_DISTRO: ${DISTRO}
+    #   TF_VAR_GUI_ACCESS: ${GUI_ACCESS}
+    #   TF_VAR_ACCESS_TOKEN: ${ACCESS_TOKEN}
+    steps:
+
+      # # PACKER
+      # - name: Setup packer
+      #   uses: hashicorp/setup-packer@main
+      #   id: setup
+      #   with:
+      #     version: latest
+
+      # - name: Install Packer Plugins
+      #   run: |
+      #     packer plugins install github.com/hashicorp/qemu
+      #     packer plugins install github.com/hashicorp/virtualbox
+      #     packer plugins install github.com/hashicorp/vagrant
+
+      # - name: Install Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.13' 
+
+      # - name: Test openstack
+      #   run: |
+      #     pip install openstackclient
+      #     openstack --help
+      #     # openstack image list
+
+      # TERRAFORM (.terraform-build)
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        # with:
+        #   tofu_wrapper: false
+
+      - name: Init Terraform
+        run: terraform init
+
+      - name: Vaidate Terraform
+        run: terraform validate
+      
+      - name: Plan Terraform
+        # id: plan
+        run: terraform plan
+
+      # Useless step ?
+      # - name: Show outputs
+      #   run: |
+      #     echo ${{ steps.plan.outputs.stdout }}
+      #     echo ${{ steps.plan.outputs.stderr }}
+      #     echo ${{ steps.plan.outputs.exitcode }}
+
+      - name: Apply Terraform
+        run: terraform apply -auto-approve
+
+  # test-kypo-cleanup:
+  #   needs: test-kypo
+  #   if: cancelled()
+  #   uses: ./.github/workflows/template-terraform-destroy.yml  # Call the reusable workflow
+    # runs-on: ubuntu-latest
+    # steps:
+    #   - name: Checkout repository
+    #     uses: actions/checkout@v4
+      
+    #   - name: Run Terraform destroy
+    #     run: |
+    #       terraform destroy -auto-approve

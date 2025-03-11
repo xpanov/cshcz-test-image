@@ -1,83 +1,133 @@
 name: KYPO Test Workflow
 
-on:
-  push:
-    branches: '**'
-  pull_request:
-    branches: '**'
+# on:
+#   push:
+#     branches: '**'
+#   pull_request:
+#     branches: '**'
 
-jobs:
+build-qemu:
+  runs-on: ubuntu-latest
+  env:
+    # variables from GL CI
+    NAME: "" # Name of packer configuration file without `.json`, for example kali
+    TYPE: "" # linux or windows
+    DISTRO: "" # See https://docs.openstack.org/glance/latest/admin/useful-image-properties.html property os_distro
+    GUI_ACCESS: "true" # Whether VNC or RDP server is installed and configured for [Guacamole](https://docs.crp.kypo.muni.cz/user-guide-advanced/sandboxes/sandbox-access/#apache-guacamole)
+    
+    # .terraform-build
+    TF_ROOT: ${CI_PROJECT_DIR}
+    TF_STATE_NAME: ${CI_COMMIT_REF_SLUG}
+    TF_VAR_CI_SERVER_HOST: ${CI_SERVER_HOST}
+    TF_VAR_CI_COMMIT_SHORT_SHA: ${CI_COMMIT_SHORT_SHA}
+    
+    # deploy-qemu
+    KEY: "qemu"
+    OS_AUTH_TYPE: "v3applicationcredential"
+    OS_AUTH_URL: "https://identity.cloud.muni.cz/v3"
+    OS_IDENTITY_API_VERSION: "3"
+    OS_INTERFACE: "public"
+    OS_REGION_NAME: "brno1"
+
+    # test-qemu
+    TF_VAR_NAME: ${NAME}
+    TF_VAR_TYPE: ${TYPE}
+    TF_VAR_DISTRO: ${DISTRO}
+    TF_VAR_GUI_ACCESS: ${GUI_ACCESS}
+    TF_VAR_ACCESS_TOKEN: ${ACCESS_TOKEN}
+
+  steps:
+    # Checkout repository
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # .build (install packer and some modules)
+    - name: Setup packer
+      uses: hashicorp/setup-packer@main
+      id: setup
+      with:
+        version: latest
+
+    - name: Install Packer Plugins
+      run: |
+        packer plugins install github.com/hashicorp/qemu
+        packer plugins install github.com/hashicorp/virtualbox
+        packer plugins install github.com/hashicorp/vagrant
+  
+
+    # Custom script from the step
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Work with terraform
+    - run: | # TODO $NAME
+        packer build -only=qemu $NAME.json
+        terraform destroy
+        terraform plan -target=module.topology.openstack_images_image_v2.test_image
+        terraform apply
+
+test-qemu:
+  runs-on: ubuntu-latest
+  needs: build-qemu
+  steps:
+
+    # .terraform-build
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+    
+    - name: Terraform plan & apply
+      run: |
+        terraform plan 
+        terraform apply
+      # and some shit with artifacts (not sure)
+
+deploy-qemu:
+  needs: ["build-qemu", "test-qemu"]
+  # TODO .get-version-from-changelog
+  
+  # - mkdir -p target-qemu
+  #  - openstack image save --file "target-qemu/$NAME" "$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA"
+
+  # TODO .upload-image-to-openstack
+
+  #    - HEAD_IMAGE_ID=$(openstack image show --column id --format value $CI_PROJECT_NAME-$VERSION)
+  #  # If previous image version exists, delete it or rename it. Once all our images follow the latest naming convention, this block can be simplified
+  #  - if openstack image show $CI_PROJECT_NAME > /dev/null; then
+  #  -   PREV_VERSION=$(openstack image show $CI_PROJECT_NAME --column properties --format json | jq '.properties."owner_specified.openstack.version"' -re) || PREV_VERSION=0.1.0
+  #  -   if openstack image show $CI_PROJECT_NAME-$PREV_VERSION > /dev/null; then
+  #  -     openstack image delete $CI_PROJECT_NAME || openstack image set $CI_PROJECT_NAME --name $CI_PROJECT_NAME-DEPRECATED
+  #  -   else
+  #  -     openstack image set $CI_PROJECT_NAME --name $CI_PROJECT_NAME-$PREV_VERSION
+  #  -   fi
+  #  - fi
+  #  - openstack image set $CI_PROJECT_NAME-$VERSION --name $CI_PROJECT_NAME
 
 
-  test-qemu:
-    runs-on: ubuntu-latest
-    # env:
-    #   TF_VAR_NAME: ${NAME}
-    #   TF_VAR_TYPE: ${TYPE}
-    #   TF_VAR_DISTRO: ${DISTRO}
-    #   TF_VAR_GUI_ACCESS: ${GUI_ACCESS}
-    #   TF_VAR_ACCESS_TOKEN: ${ACCESS_TOKEN}
-    steps:
+  # TODO .upload-image-to-openstack
 
-      # # PACKER
-      # - name: Setup packer
-      #   uses: hashicorp/setup-packer@main
-      #   id: setup
-      #   with:
-      #     version: latest
+  # STABLE_IMAGE_ID=$(openstack image show --column id --format value $CI_PROJECT_NAME-$VERSION)
 
-      # - name: Install Packer Plugins
-      #   run: |
-      #     packer plugins install github.com/hashicorp/qemu
-      #     packer plugins install github.com/hashicorp/virtualbox
-      #     packer plugins install github.com/hashicorp/vagrant
+  # TODO .git-tag
 
-      # - name: Install Python
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.13' 
+#  # Share the image to other OpenStack projects
+#    - while read -r PROJECT_ID; do
+#    -   openstack image add project $HEAD_IMAGE_ID $PROJECT_ID
+#    -   openstack image add project $STABLE_IMAGE_ID $PROJECT_ID
+#    - done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | .project_id')
+#    # Accept the sharing from each project
+#    - while read -r APP_ID && read -r APP_SECRET; do
+#    -   OS_APPLICATION_CREDENTIAL_ID=$APP_ID
+#    -   OS_APPLICATION_CREDENTIAL_SECRET=$APP_SECRET
+#    -   openstack image set --accept $HEAD_IMAGE_ID
+#    -   openstack image set --accept $STABLE_IMAGE_ID
+#    - done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | (.app_cred_id, .app_cred_secret)')
+#    - if [ $TYPE != "windows" ]; then
+#    -   TODO !reference [.upload-image-to-openstack-object-store, script]
+#    - fi
 
-      # - name: Test openstack
-      #   run: |
-      #     pip install openstackclient
-      #     openstack --help
-      #     # openstack image list
 
-      # TERRAFORM (.terraform-build)
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        # with:
-        #   tofu_wrapper: false
+test-qemu-cleanup:
+  steps:
+    # TODO test-qemu
+    # TODO .terraform-destroy
 
-      - name: Init Terraform
-        run: terraform init
-
-      - name: Vaidate Terraform
-        run: terraform validate
-      
-      - name: Plan Terraform
-        # id: plan
-        run: terraform plan
-
-      # Useless step ?
-      # - name: Show outputs
-      #   run: |
-      #     echo ${{ steps.plan.outputs.stdout }}
-      #     echo ${{ steps.plan.outputs.stderr }}
-      #     echo ${{ steps.plan.outputs.exitcode }}
-
-      - name: Apply Terraform
-        run: terraform apply -auto-approve
-
-  # test-kypo-cleanup:
-  #   needs: test-kypo
-  #   if: cancelled()
-  #   uses: ./.github/workflows/template-terraform-destroy.yml  # Call the reusable workflow
-    # runs-on: ubuntu-latest
-    # steps:
-    #   - name: Checkout repository
-    #     uses: actions/checkout@v4
-      
-    #   - name: Run Terraform destroy
-    #     run: |
-    #       terraform destroy -auto-approve
