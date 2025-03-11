@@ -1,5 +1,7 @@
 name: KYPO Test Workflow
 
+on:
+  workflow_call
 # on:
 #   push:
 #     branches: '**'
