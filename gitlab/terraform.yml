@@ -1,0 +1,41 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - when: always
+
+.terraform-build:
+  image: registry.gitlab.com/components/opentofu/gitlab-opentofu:latest-opentofu1.6.2
+  script:
+    - gitlab-tofu plan
+    - gitlab-tofu apply || (gitlab-tofu output ; exit 1)
+  resource_group: ${CI_COMMIT_REF_SLUG}
+  environment:
+    name: $TF_STATE_NAME
+    url: $POOL_URL
+    auto_stop_in: 5 days
+  cache:
+    key: "${TF_ROOT}"
+    paths:
+      - ${TF_ROOT}/.terraform/
+  artifacts:
+    paths:
+      - outputs/
+    when: always
+    reports:
+      dotenv: vars.env
+  variables:
+    TF_ROOT: ${CI_PROJECT_DIR}
+    TF_STATE_NAME: ${CI_COMMIT_REF_SLUG}
+    TF_VAR_CI_SERVER_HOST: ${CI_SERVER_HOST}
+    TF_VAR_CI_COMMIT_SHORT_SHA: ${CI_COMMIT_SHORT_SHA}
+
+.terraform-destroy:
+  script:
+    - gitlab-tofu destroy # it also calls KYPO API to destroy the SB
+    - curl --header "Private-Token:${TF_PASSWORD:-$CI_JOB_TOKEN}" --request DELETE "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" || true
+  environment:
+    action: stop
+  artifacts: null
+  when: manual
+

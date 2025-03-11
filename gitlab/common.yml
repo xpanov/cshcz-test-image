@@ -1,0 +1,77 @@
+image: registry.gitlab.ics.muni.cz:443/muni-kypo-images/docker-image-builder/packer:latest
+
+stages:
+  - build
+  - test
+  - deploy
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $GITLAB_USER_NAME == "Service KYPO Images"
+      when: never
+    - when: always
+
+variables:
+  GUI_ACCESS: "false"
+
+.build:
+  stage: build
+  when: manual
+  allow_failure: false
+  timeout: 3h
+  tags:
+    - image-builder
+  before_script:
+    - packer plugins install github.com/hashicorp/qemu
+    - packer plugins install github.com/hashicorp/virtualbox
+    - packer plugins install github.com/hashicorp/vagrant
+
+.upload-image-to-openstack:
+  script:
+    - openstack image create --file target-qemu/* --property hw_scsi_model=virtio-scsi --property hw_disk_bus=scsi --property hw_rng_model=virtio --property hw_qemu_guest_agent=yes --property os_require_quiesce=yes --property os_type=$TYPE --property os_distro=$DISTRO --property owner_specified.openstack.version=$VERSION --property owner_specified.openstack.gui_access=$GUI_ACCESS --property owner_specified.openstack.created_by=munikypo --shared $CI_PROJECT_NAME-$VERSION
+
+.git-tag:
+  script:
+    - git config user.name "$GITLAB_USER_NAME"; git config user.email "$GITLAB_USER_EMAIL"
+    - git tag -a "$KEY-$VERSION" -m "$KEY version $VERSION"
+    - git push https://root:$ACCESS_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git "$KEY-$VERSION"
+
+.get-version-from-changelog:
+  script:
+    - test ! -z "$KEY"
+    - if [ -z "$VERSION" ]; then
+    -   VERSION=$(cat CHANGELOG.md | sed -r -e "/##\s+.*\[$KEY-[0-9]+\.[0-9]+\.[0-9]+\]/!d" -e "s/.*$KEY-([0-9]+\.[0-9]+\.[0-9]+).*/\1/" | sort --version-sort --reverse | head -n 1)
+    -   test ! -z "$VERSION"
+    - fi
+    - echo "$VERSION"
+
+.upload-image-to-openstack-object-store:
+  script:
+    - cd target-qemu
+    - IMAGE_FILENAME=$(ls)
+    - mv $IMAGE_FILENAME $IMAGE_FILENAME.raw
+
+    - s3cmd -c $S3_CREDENTIALS get s3://kypo-images/SHA256SUMS SHA256SUMS
+    - s3cmd -c $S3_CREDENTIALS get s3://kypo-images/MD5SUMS MD5SUMS
+
+    - zip $CI_PROJECT_NAME.raw.zip $IMAGE_FILENAME.raw
+    - sed -i "/$CI_PROJECT_NAME.raw.zip/d" SHA256SUMS
+    - sha256sum $CI_PROJECT_NAME.raw.zip >> SHA256SUMS
+    - sed -i "/$CI_PROJECT_NAME.raw.zip/d" MD5SUMS
+    - md5sum $CI_PROJECT_NAME.raw.zip >> MD5SUMS
+
+    - qemu-img convert -f raw -O qcow2 $IMAGE_FILENAME.raw $CI_PROJECT_NAME.qcow2
+    - sed -i "/$CI_PROJECT_NAME.qcow2/d" SHA256SUMS
+    - sha256sum $CI_PROJECT_NAME.qcow2 >> SHA256SUMS
+    - sed -i "/$CI_PROJECT_NAME.qcow2/d" MD5SUMS
+    - md5sum $CI_PROJECT_NAME.qcow2 >> MD5SUMS
+
+    - sort -k 2 -o SHA256SUMS SHA256SUMS
+    - sort -k 2 -o MD5SUMS MD5SUMS
+    - s3cmd -c $S3_CREDENTIALS put $CI_PROJECT_NAME.qcow2 $CI_PROJECT_NAME.raw.zip SHA256SUMS MD5SUMS s3://kypo-images
+    - cd -
+

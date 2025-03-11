@@ -1,0 +1,13 @@
+include:
+  - https://gitlab.ics.muni.cz/muni-kypo-images/ci-cd-virtual-images/-/raw/master/terraform.yml
+
+test-kypo:
+  extends: .terraform-build
+  stage: test
+  environment:
+    on_stop: test-kypo-cleanup
+
+test-kypo-cleanup:
+  extends:
+    - test-kypo
+    - .terraform-destroy
