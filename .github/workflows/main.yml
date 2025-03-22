@@ -1,45 +1,44 @@
 name: KYPO Test Workflow
 
-on:
-  workflow_call
 # on:
-#   push:
-#     branches: '**'
-#   pull_request:
-#     branches: '**'
+#   workflow_call
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+env:
+  # variables from GL CI
+  NAME: "kali" # Name of packer configuration file without `.json`, for example kali
+  TYPE: "linux" # linux or windows
+  DISTRO: "ubuntu" # See https://docs.openstack.org/glance/latest/admin/useful-image-properties.html property os_distro
+  GUI_ACCESS: "true" # Whether VNC or RDP server is installed and configured for [Guacamole](https://docs.crp.kypo.muni.cz/user-guide-advanced/sandboxes/sandbox-access/#apache-guacamole)
+  
+  # .terraform-build
+  TF_ROOT: ${{ github.workspace }}
+  TF_STATE_NAME: ${{ github.ref_name }}
+  TF_VAR_CI_SERVER_HOST: ${{ github.server_url }}
+  TF_VAR_CI_COMMIT_SHORT_SHA: ${{ github.sha }}
+  
+  # deploy-qemu
+  KEY: "qemu"
+  OS_AUTH_TYPE: "v3applicationcredential"
+  OS_AUTH_URL: "https://identity.cloud.muni.cz/v3"
+  OS_IDENTITY_API_VERSION: "3"
+  OS_INTERFACE: "public"
+  OS_REGION_NAME: "brno1"
+
+  # test-qemu
+  TF_VAR_NAME: ${NAME}
+  TF_VAR_TYPE: ${TYPE}
+  TF_VAR_DISTRO: ${DISTRO}
+  TF_VAR_GUI_ACCESS: ${GUI_ACCESS}
+  TF_VAR_ACCESS_TOKEN: ${ACCESS_TOKEN}
 
 jobs:
-
   build-qemu:
     runs-on: ubuntu-latest
-    env:
-      # variables from GL CI
-      NAME: "" # Name of packer configuration file without `.json`, for example kali
-      TYPE: "" # linux or windows
-      DISTRO: "" # See https://docs.openstack.org/glance/latest/admin/useful-image-properties.html property os_distro
-      GUI_ACCESS: "true" # Whether VNC or RDP server is installed and configured for [Guacamole](https://docs.crp.kypo.muni.cz/user-guide-advanced/sandboxes/sandbox-access/#apache-guacamole)
-      
-      # .terraform-build
-      TF_ROOT: ${CI_PROJECT_DIR}
-      TF_STATE_NAME: ${CI_COMMIT_REF_SLUG}
-      TF_VAR_CI_SERVER_HOST: ${CI_SERVER_HOST}
-      TF_VAR_CI_COMMIT_SHORT_SHA: ${CI_COMMIT_SHORT_SHA}
-      
-      # deploy-qemu
-      KEY: "qemu"
-      OS_AUTH_TYPE: "v3applicationcredential"
-      OS_AUTH_URL: "https://identity.cloud.muni.cz/v3"
-      OS_IDENTITY_API_VERSION: "3"
-      OS_INTERFACE: "public"
-      OS_REGION_NAME: "brno1"
-
-      # test-qemu
-      TF_VAR_NAME: ${NAME}
-      TF_VAR_TYPE: ${TYPE}
-      TF_VAR_DISTRO: ${DISTRO}
-      TF_VAR_GUI_ACCESS: ${GUI_ACCESS}
-      TF_VAR_ACCESS_TOKEN: ${ACCESS_TOKEN}
-
     steps:
       # Checkout repository
       - name: Checkout Repository
@@ -70,10 +69,7 @@ jobs:
           terraform plan -target=module.topology.openstack_images_image_v2.test_image
           terraform apply
 
-  test-qemu:
-    runs-on: ubuntu-latest
-    needs: build-qemu
-    steps:
+      # TEST_QEMU
 
       # .terraform-build
       - name: Setup Terraform
@@ -85,17 +81,7 @@ jobs:
           terraform apply
         # and some stuff with artifacts (not sure)
 
-  deploy-qemu:
-    runs-on: ubuntu-latest
-    needs: ["build-qemu", "test-qemu"]
-    env: 
-      KEY: "qemu"
-      OS_AUTH_TYPE: "v3applicationcredential"
-      OS_AUTH_URL: "https://identity.cloud.muni.cz/v3"
-      OS_IDENTITY_API_VERSION: "3"
-      OS_INTERFACE: "public"
-      OS_REGION_NAME: "brno1"
-    steps:
+      # DEPLOY_QEMU
 
       # Tenplates (TODO there are some CI variables)
       - &get-version-from-changelog
@@ -154,7 +140,7 @@ jobs:
       - name: something
         run: |
           mkdir -p target-qemu
-          openstack image save --file "target-qemu/$NAME" "$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA"
+          openstack image save --file "target-qemu/$NAME" "$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA" # pushes the img to openstach
 
       - *upload-image-to-openstack
 
@@ -180,19 +166,20 @@ jobs:
       - *git-tag
 
       - run: |
-          Share the image to other OpenStack projects
+          # Share the image to other OpenStack projects
           while read -r PROJECT_ID; do
             openstack image add project $HEAD_IMAGE_ID $PROJECT_ID
             openstack image add project $STABLE_IMAGE_ID $PROJECT_ID
           done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | .project_id')
-          Accept the sharing from each project
+          # Accept the sharing from each project
           while read -r APP_ID && read -r APP_SECRET; do
             OS_APPLICATION_CREDENTIAL_ID=$APP_ID
             OS_APPLICATION_CREDENTIAL_SECRET=$APP_SECRET
             openstack image set --accept $HEAD_IMAGE_ID
             openstack image set --accept $STABLE_IMAGE_ID
           done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | (.app_cred_id, .app_cred_secret)')
-          if [ $TYPE != "windows" ]; then
+          
+          if [ $TYPE != "windows" ]; then # this is only cause of licensiung. pusg the img to a commen storage/'repo'
             # .upload-image-to-openstack-object-store
             cd target-qemu
             IMAGE_FILENAME=$(ls)
@@ -217,6 +204,8 @@ jobs:
             s3cmd -c $S3_CREDENTIALS put $CI_PROJECT_NAME.qcow2 $CI_PROJECT_NAME.raw.zip SHA256SUMS MD5SUMS s3://kypo-images
             cd -
           fi
+
+      # DESTROY
 
       # Here we are at 'cleanup'
       - name: Destroy terraform
