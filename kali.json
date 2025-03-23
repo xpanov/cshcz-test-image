@@ -7,7 +7,9 @@
             "vm_name": "kali",
             "disk_size": 20000,
             "memory": 2048,
-            "cpus": 2
+            "cpus": 2,
+            "ssh_username": "root",
+            "ssh_password": "root"
         }
     ],
     "provisioners": [
