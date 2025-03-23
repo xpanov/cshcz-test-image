@@ -84,103 +84,39 @@ jobs:
       # DEPLOY_QEMU
 
       # Tenplates (TODO there are some CI variables)
-      - &get-version-from-changelog
-        name: get-version-from-changelog
+      - name: (define) get-version-from-changelog
         run: |
-          test ! -z "$KEY"
-          if [ -z "$VERSION" ]; then
-            VERSION=$(cat CHANGELOG.md | sed -r -e "/##\s+.*\[$KEY-[0-9]+\.[0-9]+\.[0-9]+\]/!d" -e "s/.*$KEY-([0-9]+\.[0-9]+\.[0-9]+).*/\1/" | sort --version-sort --reverse | head -n 1)
-            test ! -z "$VERSION"
-          fi
-          echo "$VERSION"
-
-      - &git-tag
-        name: git-tag
-        run: |
-          git config user.name "$GITLAB_USER_NAME"; git config user.email "$GITLAB_USER_EMAIL"
-          git tag -a "$KEY-$VERSION" -m "$KEY version $VERSION"
-          git push https://root:$ACCESS_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git "$KEY-$VERSION"
-
-      - &upload-image-to-openstack
-        name: upload-image-to-openstack
-        run: openstack image create --file target-qemu/* --property hw_scsi_model=virtio-scsi --property hw_disk_bus=scsi --property hw_rng_model=virtio --property hw_qemu_guest_agent=yes --property os_require_quiesce=yes --property os_type=$TYPE --property os_distro=$DISTRO --property owner_specified.openstack.version=$VERSION --property owner_specified.openstack.gui_access=$GUI_ACCESS --property owner_specified.openstack.created_by=munikypo --shared $CI_PROJECT_NAME-$VERSION
-      
-      # do we need it here? It is used one time only
-      # - &upload-image-to-openstack-object-store
-      #   name: upload-image-to-openstack-object-store
-      #   run: |
-      #     cd target-qemu
-      #     IMAGE_FILENAME=$(ls)
-      #     mv $IMAGE_FILENAME $IMAGE_FILENAME.raw
-
-      #     s3cmd -c $S3_CREDENTIALS get s3://kypo-images/SHA256SUMS SHA256SUMS
-      #     s3cmd -c $S3_CREDENTIALS get s3://kypo-images/MD5SUMS MD5SUMS
-      #     zip $CI_PROJECT_NAME.raw.zip $IMAGE_FILENAME.raw
-      #     sed -i "/$CI_PROJECT_NAME.raw.zip/d" SHA256SUMS
-      #     sha256sum $CI_PROJECT_NAME.raw.zip >> SHA256SUMS
-      #     sed -i "/$CI_PROJECT_NAME.raw.zip/d" MD5SUMS
-      #     md5sum $CI_PROJECT_NAME.raw.zip >> MD5SUMS
-
-      #     qemu-img convert -f raw -O qcow2 $IMAGE_FILENAME.raw $CI_PROJECT_NAME.qcow2
-      #     sed -i "/$CI_PROJECT_NAME.qcow2/d" SHA256SUMS
-      #     sha256sum $CI_PROJECT_NAME.qcow2 >> SHA256SUMS
-      #     sed -i "/$CI_PROJECT_NAME.qcow2/d" MD5SUMS
-      #     md5sum $CI_PROJECT_NAME.qcow2 >> MD5SUMS
-
-      #     sort -k 2 -o SHA256SUMS SHA256SUMS
-      #     sort -k 2 -o MD5SUMS MD5SUMS
-      #     s3cmd -c $S3_CREDENTIALS put $CI_PROJECT_NAME.qcow2 $CI_PROJECT_NAME.raw.zip SHA256SUMS MD5SUMS s3://kypo-images
-      #     cd -
-
-
-      # before_script
-
-      - *get-version-from-changelog
-
-      - name: something
-        run: |
-          mkdir -p target-qemu
-          openstack image save --file "target-qemu/$NAME" "$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA" # pushes the img to openstach
-
-      - *upload-image-to-openstack
-
-      # The custom script
-
-      - run: |
-          HEAD_IMAGE_ID=$(openstack image show --column id --format value $CI_PROJECT_NAME-$VERSION)
-          # If previous image version exists, delete it or rename it. Once all our images follow the latest naming convention, this block can be simplified
-          if openstack image show $CI_PROJECT_NAME > /dev/null; then
-            PREV_VERSION=$(openstack image show $CI_PROJECT_NAME --column properties --format json | jq '.properties."owner_specified.openstack.version"' -re) || PREV_VERSION=0.1.0
-            if openstack image show $CI_PROJECT_NAME-$PREV_VERSION > /dev/null; then
-              openstack image delete $CI_PROJECT_NAME || openstack image set $CI_PROJECT_NAME --name $CI_PROJECT_NAME-DEPRECATED
-            else
-              openstack image set $CI_PROJECT_NAME --name $CI_PROJECT_NAME-$PREV_VERSION
+          get_version_from_changelog() {          
+            test ! -z "$KEY"
+            if [ -z "$VERSION" ]; then
+              VERSION=$(cat CHANGELOG.md | sed -r -e "/##\s+.*\[$KEY-[0-9]+\.[0-9]+\.[0-9]+\]/!d" -e "s/.*$KEY-([0-9]+\.[0-9]+\.[0-9]+).*/\1/" | sort --version-sort --reverse | head -n 1)
+              test ! -z "$VERSION"
             fi
-          fi
-          openstack image set $CI_PROJECT_NAME-$VERSION --name $CI_PROJECT_NAME
+            echo "$VERSION"
+          }
 
-      - *upload-image-to-openstack
+          export -f get_version_from_changelog
 
-      - run: STABLE_IMAGE_ID=$(openstack image show --column id --format value $CI_PROJECT_NAME-$VERSION)
+      - name: (define) git-tag
+        run: |
+          export git_tag() {
+            git config user.name "$GITLAB_USER_NAME"; git config user.email "$GITLAB_USER_EMAIL"
+            git tag -a "$KEY-$VERSION" -m "$KEY version $VERSION"
+            git push https://root:$ACCESS_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git "$KEY-$VERSION"          
+          }
+          export -f git_tag
 
-      - *git-tag
+      - name: (define) upload-image-to-openstack
+        run: |
+          upload_image_to_openstack() {
+            openstack image create --file target-qemu/* --property hw_scsi_model=virtio-scsi --property hw_disk_bus=scsi --property hw_rng_model=virtio --property hw_qemu_guest_agent=yes --property os_require_quiesce=yes --property os_type=$TYPE --property os_distro=$DISTRO --property owner_specified.openstack.version=$VERSION --property owner_specified.openstack.gui_access=$GUI_ACCESS --property owner_specified.openstack.created_by=munikypo --shared $CI_PROJECT_NAME-$VERSION
+          }
+          export -f upload_image_to_openstack
 
-      - run: |
-          # Share the image to other OpenStack projects
-          while read -r PROJECT_ID; do
-            openstack image add project $HEAD_IMAGE_ID $PROJECT_ID
-            openstack image add project $STABLE_IMAGE_ID $PROJECT_ID
-          done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | .project_id')
-          # Accept the sharing from each project
-          while read -r APP_ID && read -r APP_SECRET; do
-            OS_APPLICATION_CREDENTIAL_ID=$APP_ID
-            OS_APPLICATION_CREDENTIAL_SECRET=$APP_SECRET
-            openstack image set --accept $HEAD_IMAGE_ID
-            openstack image set --accept $STABLE_IMAGE_ID
-          done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | (.app_cred_id, .app_cred_secret)')
-          
-          if [ $TYPE != "windows" ]; then # this is only cause of licensiung. pusg the img to a commen storage/'repo'
-            # .upload-image-to-openstack-object-store
+      
+      - name: upload-image-to-openstack-object-store
+        run: |
+          upload_image_to_openstack_object_store() {
             cd target-qemu
             IMAGE_FILENAME=$(ls)
             mv $IMAGE_FILENAME $IMAGE_FILENAME.raw
@@ -203,6 +139,85 @@ jobs:
             sort -k 2 -o MD5SUMS MD5SUMS
             s3cmd -c $S3_CREDENTIALS put $CI_PROJECT_NAME.qcow2 $CI_PROJECT_NAME.raw.zip SHA256SUMS MD5SUMS s3://kypo-images
             cd -
+          }
+          export -f upload_image_to_openstack_object_store
+
+
+      # before_script
+
+      - name: get-version-from-changelog
+        run: get_version_from_changelog
+
+      - name: something
+        run: |
+          mkdir -p target-qemu
+          openstack image save --file "target-qemu/$NAME" "$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA" # pushes the img to openstach
+
+      - name: upload_image_to_openstack
+        run: upload_image_to_openstack
+
+      # The custom script
+
+      - run: |
+          HEAD_IMAGE_ID=$(openstack image show --column id --format value $CI_PROJECT_NAME-$VERSION)
+          # If previous image version exists, delete it or rename it. Once all our images follow the latest naming convention, this block can be simplified
+          if openstack image show $CI_PROJECT_NAME > /dev/null; then
+            PREV_VERSION=$(openstack image show $CI_PROJECT_NAME --column properties --format json | jq '.properties."owner_specified.openstack.version"' -re) || PREV_VERSION=0.1.0
+            if openstack image show $CI_PROJECT_NAME-$PREV_VERSION > /dev/null; then
+              openstack image delete $CI_PROJECT_NAME || openstack image set $CI_PROJECT_NAME --name $CI_PROJECT_NAME-DEPRECATED
+            else
+              openstack image set $CI_PROJECT_NAME --name $CI_PROJECT_NAME-$PREV_VERSION
+            fi
+          fi
+          openstack image set $CI_PROJECT_NAME-$VERSION --name $CI_PROJECT_NAME
+
+      - name: upload_image_to_openstack
+        run: upload_image_to_openstack
+
+      - run: STABLE_IMAGE_ID=$(openstack image show --column id --format value $CI_PROJECT_NAME-$VERSION)
+
+      - name: git_tag
+        run: git_tag
+
+      - run: |
+          # Share the image to other OpenStack projects
+          while read -r PROJECT_ID; do
+            openstack image add project $HEAD_IMAGE_ID $PROJECT_ID
+            openstack image add project $STABLE_IMAGE_ID $PROJECT_ID
+          done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | .project_id')
+          # Accept the sharing from each project
+          while read -r APP_ID && read -r APP_SECRET; do
+            OS_APPLICATION_CREDENTIAL_ID=$APP_ID
+            OS_APPLICATION_CREDENTIAL_SECRET=$APP_SECRET
+            openstack image set --accept $HEAD_IMAGE_ID
+            openstack image set --accept $STABLE_IMAGE_ID
+          done < <(echo $APPLICATION_CREDENTIALS | jq -r '.[] | (.app_cred_id, .app_cred_secret)')
+          
+          if [ $TYPE != "windows" ]; then # this is only cause of licensiung. pusg the img to a commen storage/'repo'
+            # .upload-image-to-openstack-object-store
+            upload_image_to_openstack_object_store
+            # cd target-qemu
+            # IMAGE_FILENAME=$(ls)
+            # mv $IMAGE_FILENAME $IMAGE_FILENAME.raw
+
+            # s3cmd -c $S3_CREDENTIALS get s3://kypo-images/SHA256SUMS SHA256SUMS
+            # s3cmd -c $S3_CREDENTIALS get s3://kypo-images/MD5SUMS MD5SUMS
+            # zip $CI_PROJECT_NAME.raw.zip $IMAGE_FILENAME.raw
+            # sed -i "/$CI_PROJECT_NAME.raw.zip/d" SHA256SUMS
+            # sha256sum $CI_PROJECT_NAME.raw.zip >> SHA256SUMS
+            # sed -i "/$CI_PROJECT_NAME.raw.zip/d" MD5SUMS
+            # md5sum $CI_PROJECT_NAME.raw.zip >> MD5SUMS
+
+            # qemu-img convert -f raw -O qcow2 $IMAGE_FILENAME.raw $CI_PROJECT_NAME.qcow2
+            # sed -i "/$CI_PROJECT_NAME.qcow2/d" SHA256SUMS
+            # sha256sum $CI_PROJECT_NAME.qcow2 >> SHA256SUMS
+            # sed -i "/$CI_PROJECT_NAME.qcow2/d" MD5SUMS
+            # md5sum $CI_PROJECT_NAME.qcow2 >> MD5SUMS
+
+            # sort -k 2 -o SHA256SUMS SHA256SUMS
+            # sort -k 2 -o MD5SUMS MD5SUMS
+            # s3cmd -c $S3_CREDENTIALS put $CI_PROJECT_NAME.qcow2 $CI_PROJECT_NAME.raw.zip SHA256SUMS MD5SUMS s3://kypo-images
+            # cd -
           fi
 
       # DESTROY
