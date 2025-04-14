@@ -58,7 +58,9 @@ jobs:
           packer plugins install github.com/hashicorp/vagrant
     
       - name: Got to a folder
-        run: cd ubuntu-22.04-master
+        run: |
+          apt-get install qemu-system
+          cd ubuntu-22.04-master
 
       # Custom script from the step
       - name: Setup Terraform
