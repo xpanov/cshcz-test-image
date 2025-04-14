@@ -59,6 +59,7 @@ jobs:
     
       - name: Got to a folder
         run: |
+          sudo apt-get upgrade
           sudo apt-get install -y qemu-system
           cd ubuntu-22.04-master
 
