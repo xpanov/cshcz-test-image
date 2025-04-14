@@ -1,6 +1,6 @@
 terraform {
-  backend "http" {
-  }
+#  backend "http" {
+#  }
   required_providers {
     kypo = {
       source  = "vydrazde/kypo"
