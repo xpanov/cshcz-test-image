@@ -1,0 +1,20 @@
+#cloud-config
+autoinstall:
+  storage:
+    layout:
+      name: direct
+  early-commands:
+    # otherwise packer tries to connect and exceed max attempts:
+    - systemctl stop ssh.service
+    - systemctl stop ssh.socket
+  ssh:
+    install-server: yes
+    allow-pw: yes
+  user-data:
+    users:
+      - name: root
+        plain_text_passwd: toor
+        lock_passwd: false
+  late-commands:
+    - sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/g' /target/etc/ssh/sshd_config
+  version: 1

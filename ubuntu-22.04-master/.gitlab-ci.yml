@@ -1,0 +1,38 @@
+include:
+  - project: muni-kypo-images/ci-cd-virtual-images
+    file: qemu.yml
+  - project: muni-kypo-images/ci-cd-virtual-images
+    file: vbox.yml
+
+variables:
+  NAME: "ubuntu"
+  TYPE: "linux"
+  DISTRO: "ubuntu"
+  GUI_ACCESS: "false"
+
+test-vbox:
+  stage: test
+  script:
+    - vagrant box add --name mybox target-vbox/package.box
+    - vagrant up
+  resource_group: virtual-machine
+  needs: ["build-vbox"]
+
+deploy-vbox:
+  stage: deploy
+  before_script: !reference [.get-version-from-changelog, script]
+  script:
+    - curl --header "Content-Type:application/json" --header "Authorization:Bearer $VAGRANT_CLOUD_TOKEN" https://app.vagrantup.com/api/v1/box/$VAGRANT_CLOUD_USER/$CI_PROJECT_NAME/versions --data "{\"version\":{\"version\":\"$VERSION\",\"description\":\"$DESCRIPTION\"}}"
+    - curl --header "Content-Type:application/json" --header "Authorization:Bearer $VAGRANT_CLOUD_TOKEN" https://app.vagrantup.com/api/v1/box/$VAGRANT_CLOUD_USER/$CI_PROJECT_NAME/version/$VERSION/providers  --data "{\"provider\":{\"checksum\":\"`sha1sum target-vbox/* | awk '{print $1}'`\",\"checksum_type\":\"sha1\",\"name\":\"virtualbox\"}}"
+    - UPLOAD_PATH=$(curl --header "Authorization:Bearer $VAGRANT_CLOUD_TOKEN" https://app.vagrantup.com/api/v1/box/$VAGRANT_CLOUD_USER/$CI_PROJECT_NAME/version/$VERSION/provider/virtualbox/upload | jq -r .upload_path)
+    - curl $UPLOAD_PATH --request PUT --upload-file target-vbox/package.box
+    - curl --header "Authorization:Bearer $VAGRANT_CLOUD_TOKEN"  https://app.vagrantup.com/api/v1/box/$VAGRANT_CLOUD_USER/$CI_PROJECT_NAME/version/$VERSION/release --request PUT
+    - !reference [.git-tag, script]
+  when: manual
+  needs: ["build-vbox", "test-vbox"]
+  only:
+    refs:
+      - master
+  variables:
+    VAGRANT_CLOUD_USER: "munikypo"
+    KEY: "vbox"

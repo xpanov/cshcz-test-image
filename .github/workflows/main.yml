@@ -71,15 +71,15 @@ jobs:
 
       # TEST_QEMU
 
-      # .terraform-build
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      # # .terraform-build
+      # - name: Setup Terraform
+      #   uses: hashicorp/setup-terraform@v3
       
-      - name: Terraform plan & apply
-        run: |
-          terraform plan 
-          terraform apply
-        # and some stuff with artifacts (not sure)
+      # - name: Terraform plan & apply
+      #   run: |
+      #     terraform plan 
+      #     terraform apply
+      #   # and some stuff with artifacts (not sure)
 
       # DEPLOY_QEMU
 
@@ -99,7 +99,7 @@ jobs:
 
       - name: (define) git-tag
         run: |
-          export git_tag() {
+          git_tag() {
             git config user.name "$GITLAB_USER_NAME"; git config user.email "$GITLAB_USER_EMAIL"
             git tag -a "$KEY-$VERSION" -m "$KEY version $VERSION"
             git push https://root:$ACCESS_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git "$KEY-$VERSION"          
