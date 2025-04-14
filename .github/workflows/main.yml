@@ -53,13 +53,13 @@ jobs:
 
       - name: Install Packer Plugins
         run: |
-          sudo packer plugins install github.com/hashicorp/qemu
-          sudo packer plugins install github.com/hashicorp/virtualbox
-          sudo packer plugins install github.com/hashicorp/vagrant
+          packer plugins install github.com/hashicorp/qemu
+          packer plugins install github.com/hashicorp/virtualbox
+          packer plugins install github.com/hashicorp/vagrant
     
       - name: Got to a folder
         run: |
-          sudo apt-get install qemu-system
+          apt-get install -y qemu-system
           cd ubuntu-22.04-master
 
       # Custom script from the step
@@ -68,7 +68,7 @@ jobs:
 
       - name: Work with terraform
         run: |
-          sudo packer build -only=qemu $NAME.json
+          packer build -only=qemu $NAME.json
           terraform destroy
           terraform plan -target=module.topology.openstack_images_image_v2.test_image
           terraform apply
