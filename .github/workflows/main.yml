@@ -13,7 +13,7 @@ env:
   NAME: "ubuntu" # Name of packer configuration file without `.json`, for example kali
   TYPE: "linux" # linux or windows
   DISTRO: "ubuntu" # See https://docs.openstack.org/glance/latest/admin/useful-image-properties.html property os_distro
-  GUI_ACCESS: "true" # Whether VNC or RDP server is installed and configured for [Guacamole](https://docs.crp.kypo.muni.cz/user-guide-advanced/sandboxes/sandbox-access/#apache-guacamole)
+  GUI_ACCESS: true # Whether VNC or RDP server is installed and configured for [Guacamole](https://docs.crp.kypo.muni.cz/user-guide-advanced/sandboxes/sandbox-access/#apache-guacamole)
   
   # .terraform-build
   TF_ROOT: ${{ github.workspace }}
@@ -44,7 +44,7 @@ env:
 
   TF_VAR_KYPO_ENDPOINT: "https://images.crp.kypo.muni.cz"
   TF_VAR_CI_PROJECT_URL: "https://github.com/xpanov/cshcz-test-image"
-  TF_VAR_CI_PROJECT_ID: "cshcz-test-image"
+  TF_VAR_CI_PROJECT_ID: 420
   TF_VAR_CI_PROJECT_PATH: "./"
 
   PACKER_LOG: 1
