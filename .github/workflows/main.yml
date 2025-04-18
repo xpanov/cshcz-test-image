@@ -80,7 +80,7 @@ jobs:
       - name: Packer
         run: |
           cd ubuntu-22.04-master
-          packer build -only=qemu $NAME.json
+          sudo packer build -only=qemu $NAME.json
 
       - name: Work with terraform
         run: |
