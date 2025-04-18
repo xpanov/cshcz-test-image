@@ -14,7 +14,7 @@ env:
   TYPE: "linux" # linux or windows
   DISTRO: "ubuntu" # See https://docs.openstack.org/glance/latest/admin/useful-image-properties.html property os_distro
   GUI_ACCESS: false # Whether VNC or RDP server is installed and configured for [Guacamole](https://docs.crp.kypo.muni.cz/user-guide-advanced/sandboxes/sandbox-access/#apache-guacamole)
-  
+
   # .terraform-build
   TF_ROOT: ${{ github.workspace }}
   TF_STATE_NAME: ${{ github.ref_name }}
@@ -33,7 +33,7 @@ env:
   TF_VAR_NAME: ${NAME}
   TF_VAR_TYPE: ${TYPE}
   TF_VAR_DISTRO: ${DISTRO}
-  TF_VAR_GUI_ACCESS: ${GUI_ACCESS}
+  TF_VAR_GUI_ACCESS: false
   TF_VAR_ACCESS_TOKEN: ${ACCESS_TOKEN}
 
   OS_APPLICATION_CREDENTIAL_ID: ${{ secrets.OS_APPLICATION_CREDENTIAL_ID }}
