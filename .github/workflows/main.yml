@@ -55,9 +55,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # - name: Packer
+      #   run: |
+      #     sudo packer build -only=qemu $NAME.json
       - name: Packer
         run: |
-          sudo packer build -only=qemu $NAME.json
+          packer build -only=qemu $NAME.json
 
       # # .build (install packer and some modules)
       # - name: Setup packer
