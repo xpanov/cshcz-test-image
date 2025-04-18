@@ -70,8 +70,8 @@ jobs:
     
       - name: Got to a folder
         run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-system
+          apt-get update
+          apt-get install -y qemu-system
 
       # Custom script from the step
       - name: Setup Terraform
