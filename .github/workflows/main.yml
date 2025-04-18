@@ -45,7 +45,7 @@ env:
   TF_VAR_KYPO_ENDPOINT: ${{ secrets.TF_VAR_KYPO_ENDPOINT }}
   TF_VAR_CI_PROJECT_URL: ${{ secrets.TF_VAR_CI_PROJECT_URL }}
 
-  PACKER_LOG=1
+  PACKER_LOG: 1
 
 jobs:
   build-qemu:
