@@ -45,23 +45,21 @@ env:
   TF_VAR_KYPO_ENDPOINT: "https://images.crp.kypo.muni.cz"
   TF_VAR_CI_PROJECT_URL: "https://github.com/xpanov/cshcz-test-image"
   TF_VAR_CI_PROJECT_ID: "cshcz-test-image"
+  TF_VAR_CI_PROJECT_PATH: "./"
 
   PACKER_LOG: 1
 
 jobs:
-  build-packer:
-    runs-on: self-hosted
-    steps:
-      # Checkout repository
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+  # build-packer:
+  #   runs-on: self-hosted
+  #   steps:
+  #     # Checkout repository
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v4
 
-      # - name: Packer
-      #   run: |
-      #     sudo packer build -only=qemu $NAME.json
-      - name: Packer
-        run: |
-          packer build -only=qemu $NAME.json
+  #     - name: Packer
+  #       run: |
+  #         packer build -only=qemu $NAME.json
 
       # # .build (install packer and some modules)
       # - name: Setup packer
