@@ -68,10 +68,10 @@ jobs:
           packer plugins install github.com/hashicorp/virtualbox
           packer plugins install github.com/hashicorp/vagrant
     
-      - name: Got to a folder
-        run: |
-          apt-get update
-          apt-get install -y qemu-system
+      # - name: Got to a folder
+      #   run: |
+      #     apt-get update
+      #     apt-get install -y qemu-system
 
       # Custom script from the step
       - name: Setup Terraform
