@@ -80,7 +80,7 @@ jobs:
       #     apt-get install -y qemu-system
 
   build-qemu:
-    needs: build-packer
+    # needs: build-packer
     runs-on: ubuntu-latest
     steps:
       # Checkout repository
