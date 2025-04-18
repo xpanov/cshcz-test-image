@@ -1,1 +1,3 @@
-pipeline.sh
+packer_cache/
+target-vbox/
+target-qemu/

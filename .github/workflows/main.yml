@@ -55,18 +55,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # .build (install packer and some modules)
-      - name: Setup packer
-        uses: hashicorp/setup-packer@main
-        id: setup
-        with:
-          version: latest
+      # # .build (install packer and some modules)
+      # - name: Setup packer
+      #   uses: hashicorp/setup-packer@main
+      #   id: setup
+      #   with:
+      #     version: latest
 
-      - name: Install Packer Plugins
-        run: |
-          packer plugins install github.com/hashicorp/qemu
-          packer plugins install github.com/hashicorp/virtualbox
-          packer plugins install github.com/hashicorp/vagrant
+      # - name: Install Packer Plugins
+      #   run: |
+      #     packer plugins install github.com/hashicorp/qemu
+      #     packer plugins install github.com/hashicorp/virtualbox
+      #     packer plugins install github.com/hashicorp/vagrant
     
       # - name: Got to a folder
       #   run: |
@@ -79,7 +79,6 @@ jobs:
 
       - name: Packer
         run: |
-          cd ubuntu-22.04-master
           sudo packer build -only=qemu $NAME.json
 
       - name: Work with terraform

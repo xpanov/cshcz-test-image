@@ -1,20 +1,31 @@
-# Image CI example
+# Ubuntu 22.04 Base image
 
-This is an example how to use the CI for a KYPO image, such as [kali](https://gitlab.ics.muni.cz/muni-kypo-images/kali).
+This repo contains Packer files for building Ubuntu 22.04 LTS Jammy Jellyfish amd64 base image for QEMU/OpenStack and for VirtualBox/Vagrant using Gitlab CI/CD.
 
-To use the CI:
-- copy the files `.gitlab-ci.yml`, `terraform.tf`, `topology.yml`, `provisioning/playbook.yml`
-- fill in the variables in `.gitlab-ci.yml`
-- if you want to use CI for only qemu or vbox version, delete the other include from `.gitlab-ci.yml` 
-- fill in `mgmt_user` in `topology.yml`, increase flavor if necesarry
-- ensure the following CI/CD variables are set:
-  - `TF_VAR_KYPO_ENDPOINT`
-  - `KYPO_CLIENT_ID`
-  - `KYPO_USERNAME`
-  - `KYPO_PASSWORD`
-  - `OS_APPLICATION_CREDENTIAL_ID` - credentials for OpenStack project where the qemu image will be uploaded
-  - `OS_APPLICATION_CREDENTIAL_SECRET`
-  - `ACCESS_TOKEN` - access token with read and write permissions to the repository
-  - `APPLICATION_CREDENTIALS` - json array with OpenStack credentials to projects where the qemu image is shared
-  - `S3_CREDENTIALS` - file with credentials to OpenStack object store where the qemu images are published
-  - `VAGRANT_CLOUD_TOKEN` - token to Vagrant cloud where vbox images are published
+## Image for QEMU/OpenStack
+
+Built from [live server ISO](https://www.releases.ubuntu.com/jammy/) using [QEMU builder](https://developer.hashicorp.com/packer/plugins/builders/qemu).
+
+There is one user account:
+
+*  `ubuntu` created by [cloud-init](https://cloudinit.readthedocs.io/en/latest/), enabled for SSH
+
+## Image for VirtualBox/Vagrant
+
+Built from [official Vagrant box](https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64-vagrant.box) provided by an OS vendor using [Vagrant builder](https://developer.hashicorp.com/packer/plugins/builders/vagrant).
+
+There is one user account:
+
+*  `vagrant` with password `vagrant`, enabled for SSH
+
+## How to build
+
+For information how to build this image see [wiki](https://gitlab.ics.muni.cz/muni-kypo-images/muni-kypo-images-wiki/-/wikis/How-to-build-an-image-locally).
+
+## Known issues and requested features
+
+See [issues](https://gitlab.ics.muni.cz/muni-kypo-images/ubuntu-22.04/-/issues).
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
