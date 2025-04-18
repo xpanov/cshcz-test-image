@@ -44,7 +44,7 @@ env:
 
   TF_VAR_KYPO_ENDPOINT: "https://images.crp.kypo.muni.cz"
   TF_VAR_CI_PROJECT_URL: "https://github.com/xpanov/cshcz-test-image"
-  CI_PROJECT_ID: "cshcz-test-image"
+  TF_VAR_CI_PROJECT_ID: "cshcz-test-image"
 
   PACKER_LOG: 1
 
