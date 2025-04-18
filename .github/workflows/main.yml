@@ -48,12 +48,16 @@ env:
   PACKER_LOG: 1
 
 jobs:
-  build-qemu:
+  build-packer:
     runs-on: self-hosted
     steps:
       # Checkout repository
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Packer
+        run: |
+          sudo packer build -only=qemu $NAME.json
 
       # # .build (install packer and some modules)
       # - name: Setup packer
@@ -73,13 +77,16 @@ jobs:
       #     apt-get update
       #     apt-get install -y qemu-system
 
+  build-qemu:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       # Custom script from the step
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-
-      - name: Packer
-        run: |
-          sudo packer build -only=qemu $NAME.json
 
       - name: Work with terraform
         run: |
