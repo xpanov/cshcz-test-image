@@ -94,6 +94,7 @@ jobs:
 
       - name: Work with terraform
         run: |
+          terraform init
           terraform destroy
           terraform plan -target=module.topology.openstack_images_image_v2.test_image
           terraform apply
