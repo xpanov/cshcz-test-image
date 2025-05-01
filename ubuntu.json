@@ -94,7 +94,7 @@
   "post-processors": [
   ],
   "variables": {
-    "boot_wait": "5m",
+    "boot_wait": "10s",
     "cpus": "4",
     "disk_size": "8192",
     "headless": "true",

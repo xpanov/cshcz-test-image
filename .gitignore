@@ -1,3 +1,6 @@
 packer_cache/
 target-vbox/
 target-qemu/
+pipeline.sh
+.terraform
+outputs
