@@ -71,6 +71,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: test_composite_action
+        uses: ./.github/actions/test_composite_action
+
       - name: Packer
         run: |
           packer build -only=qemu $NAME.json
@@ -193,8 +196,8 @@ jobs:
         id: get-version-from-changelog
         uses: ./.github/actions/get_version_from_changelog
         # run: get_version_from_changelog
-        env:
-          VERSION: ${{ steps.foo.outputs.version }}
+        # env:
+        #   VERSION: ${{ steps.foo.outputs.version }}
 
       - name: something
         run: |
