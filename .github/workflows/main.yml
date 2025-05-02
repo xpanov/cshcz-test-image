@@ -113,6 +113,7 @@ jobs:
         run: |
           tofu init
           tofu validate
+          # tofu plan
           tofu plan -target=module.topology.openstack_images_image_v2.test_image
           tofu apply -auto-approve
           tofu output definition_id
