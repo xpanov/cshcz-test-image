@@ -65,6 +65,7 @@ env:
 
 jobs:
   build-packer:
+    if: false
     runs-on: self-hosted
     steps:
       # Checkout repository
@@ -111,11 +112,10 @@ jobs:
       - name: Work with terraform
         run: |
           tofu init
-          # tofu destroy
           tofu validate
-          tofu plan 
-          # tofu plan -target=module.topology.openstack_images_image_v2.test_image
+          tofu plan -target=module.topology.openstack_images_image_v2.test_image
           tofu apply -auto-approve
+          tofu output definition_id
 
       # TEST_QEMU
 
