@@ -1,5 +1,6 @@
-name: ubuntu-22.04-testing-topology
+# name: ubuntu-22.04-testing-topology
 # name: ubuntu-22-04-testing-topology
+name: xubuntu-6103dd8f
 
 hosts:
   - name: image-test
