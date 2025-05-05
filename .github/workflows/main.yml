@@ -107,11 +107,17 @@ jobs:
       # Custom script from the step
       - name: Setup Tofu
         uses: opentofu/setup-opentofu@v1
-        with:
-          tofu_version: 1.9.0
+        # with:
+        #   tofu_version: 1.9.0
       
-      - name: Get Tofu version
-        run: tofu --version
+      - name: Setup OpenStack
+        uses: osism/openstack-action@main
+        with:
+          release: yoga
+          services: keystone
+      
+      # - name: Get Tofu version
+      #   run: tofu --version
 
       - name: Work with terraform
         run: |
