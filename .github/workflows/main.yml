@@ -104,16 +104,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup OpenStack
+        run: pip install python-openstackclient
+        # with:
+        #   release: yoga
+
       # Custom script from the step
       - name: Setup Tofu
         uses: opentofu/setup-opentofu@v1
         # with:
         #   tofu_version: 1.9.0
       
-      - name: Setup OpenStack
-        uses: osism/openstack-action@main
-        # with:
-        #   release: yoga
         #   services: keystone
       
       # - name: Get Tofu version
