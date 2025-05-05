@@ -1,6 +1,7 @@
 # name: ubuntu-22.04-testing-topology
 # name: ubuntu-22-04-testing-topology
-name: xubuntu-6103dd8f
+# name: xubuntu-6103dd8f
+name: terraform-testing-definition
 
 hosts:
   - name: image-test
