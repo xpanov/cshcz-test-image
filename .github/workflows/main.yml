@@ -112,9 +112,9 @@ jobs:
       
       - name: Setup OpenStack
         uses: osism/openstack-action@main
-        with:
-          release: yoga
-          services: keystone
+        # with:
+        #   release: yoga
+        #   services: keystone
       
       # - name: Get Tofu version
       #   run: tofu --version
